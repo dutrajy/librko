@@ -122,22 +122,26 @@ void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
             // }
         } 
 
-        // update solution pool
-        int orignalSize = (int)pool.size();
-        for (int i = 0; i < (int)pool.size(); i++)
-        {
-            // check if s is better than the solution of the pool
-            if (s.ofv < pool[i].ofv)
-            {
-                // insert the current solution in the pool
-                pool.insert(pool.begin()+i, s);
-
-                // trunc the size of the pool
-                pool.resize(orignalSize);
-
+        // Checks if s already exists in the pool
+        bool exists = false;
+        for (int i = 0; i < (int)pool.size(); i++) {
+            if (pool[i].ofv == s.ofv) {
+                exists = true;
                 break;
             }
         }
+
+        // Goes from back to front
+        if (!exists)
+        {
+            int i;
+            for (i = (int)pool.size()-1; i > 0 && pool[i - 1].ofv > s.ofv; i--) {
+                pool[i] = pool[i - 1]; // Push to the right
+            }
+
+            pool[i] = s; // Insert the new solution
+        }
+
     }
 }
 
