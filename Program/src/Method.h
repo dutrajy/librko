@@ -48,14 +48,12 @@ double get_time_in_seconds() {
 *************************************************************************************/
 void CreateInitialSolutions(TSol &s, const int n)
 {
-    s.rk.clear();
     s.rk.resize(n);
 
     // create a random-key solution
     for (int j = 0; j < n; j++){
         s.rk[j] = randomico(0,1);  // random value between [0,1)
     }
-    s.ofv = 0;
 }
 
 /************************************************************************************
@@ -66,21 +64,38 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
 {
     #pragma omp critical
     {
-        pool.clear();
-        pool.resize(sizePool);
         for (int i = 0; i < sizePool; i++){
             CreateInitialSolutions(pool[i], data.n);
             pool[i].ofv = Decoder(pool[i], data);
+            pool[i].best_time = get_time_in_seconds();
         }
 
         // sort pool in increase order of fitness
-        sort(pool.begin(), pool.end(), sortByFitness);
+        for (int i = 0; i < sizePool - 1; i++) {
+            int minIndex = i;
+
+            for (int j = i + 1; j < sizePool; j++) {
+                if (pool[j].ofv < pool[minIndex].ofv) {
+                    minIndex = j;
+                }
+            }
+
+            // change solutions
+            if (minIndex != i) {
+                TSol aux = pool[i];
+                pool[i] = pool[minIndex];
+                pool[minIndex] = aux;
+            }
+        }
 
         // verify if exists similar solutions in the pool
         int clone = 0;
         for (int i = sizePool-1; i >0 ; i--){
             if (pool[i].ofv == pool[i-1].ofv){
-                std::shuffle(pool[i].rk.begin(), pool[i].rk.end(),rng);
+                for (int j=0; j<0.2*data.n; j++){
+                    int pos = irandomico(0, data.n-1);
+                    pool[i].rk[pos] = randomico(0, 1);
+                }
                 pool[i].ofv = Decoder(pool[i], data);
                 clone = 1;
             }
@@ -88,7 +103,24 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
 
         // sort pool in increase order of fitness
         if (clone)
-            sort(pool.begin(), pool.end(), sortByFitness);
+        {
+            for (int i = 0; i < sizePool - 1; i++) {
+                int minIndex = i;
+    
+                for (int j = i + 1; j < sizePool; j++) {
+                    if (pool[j].ofv < pool[minIndex].ofv) {
+                        minIndex = j;
+                    }
+                }
+    
+                // change solutions
+                if (minIndex != i) {
+                    TSol aux = pool[i];
+                    pool[i] = pool[minIndex];
+                    pool[minIndex] = aux;
+                }
+            }
+        }
     }
 }
 
@@ -100,28 +132,6 @@ void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
 {
     #pragma omp critical
     {   
-        // update the best solution found
-        if (s.ofv < pool[0].ofv) 
-        {
-            // update the runtime to find the best solution
-            s.best_time = get_time_in_seconds();
-    
-            // update the metaheuristic that found the best solution
-            strcpy(s.nameMH, mh);
-    
-            if (debug) {
-                // get the current thread ID
-                int thread_id = omp_get_thread_num();   
-                printf("\nBest solution: %.10lf (Thread: %d - MH: %s)", s.ofv, thread_id, mh);
-            }
-    
-            // TTT plot
-            // if (s.ofv <= -149){  // target = -149 for Knapsack problem 
-            //     stop_execution.store(true);                      // stop all threads
-            //     
-            // }
-        } 
-
         // Checks if s already exists in the pool
         bool exists = false;
         for (int i = 0; i < (int)pool.size(); i++) {
@@ -131,17 +141,37 @@ void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
             }
         }
 
+        // print that a new best solution was found
+        if (s.ofv < pool[0].ofv && debug) 
+        {
+            // get the current thread ID
+            int thread_id = omp_get_thread_num();   
+            printf("\nBest solution: %.10lf (Thread: %d - MH: %s)", s.ofv, thread_id, mh);
+    
+            // TTT plot
+            // if (s.ofv <= -149){  // target = -149 for Knapsack problem 
+            //     stop_execution.store(true);                      // stop all threads
+            //     
+            // }
+        } 
+
         // Goes from back to front
         if (!exists)
         {
+            // update the runtime to find this solution
+            s.best_time = get_time_in_seconds();
+    
+            // update the metaheuristic that found this solution
+            strcpy(s.nameMH, mh);
+
+            // insert the new solution
             int i;
             for (i = (int)pool.size()-1; i > 0 && pool[i - 1].ofv > s.ofv; i--) {
                 pool[i] = pool[i - 1]; // Push to the right
             }
 
-            pool[i] = s; // Insert the new solution
+            pool[i] = s; 
         }
-
     }
 }
 
