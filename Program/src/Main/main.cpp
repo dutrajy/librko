@@ -203,6 +203,7 @@ int main(int argc, char *argv[ ])
 
         // best solution found in a run
         TSol bestSolutionRun;  
+        bestSolution.best_time = 0.0;
         
         // computational times
         double start_time, end_time;                
@@ -215,11 +216,12 @@ int main(int argc, char *argv[ ])
 
         if (NUM_MH > 0){
             // create initial solutions in the pool of solutions
+            pool.clear();
+            pool.resize(runData.sizePool);
             CreatePoolSolutions(data, runData.sizePool);
 
             // best solution found in this run
             bestSolutionRun = pool[0];
-            pool[0].best_time = get_time_in_seconds();
 
             omp_set_num_threads(NUM_MH);
             #pragma omp parallel private(rng) shared(pool, stop_execution)
