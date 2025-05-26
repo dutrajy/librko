@@ -32,7 +32,7 @@ void WriteSolutionScreen(const char *algorithms[], int numMH, TSol s,
 	// print solution pool 
 	printf("\nSolution Pool:\n");
 	for (int i = 0; i< (int)pool.size(); i++)
-		printf("%.5lf\n", pool[i].ofv);
+		printf("%.5lf [%s]\n", pool[i].ofv, pool[i].nameMH);
 }
 
 /************************************************************************************

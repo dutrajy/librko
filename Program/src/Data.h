@@ -9,11 +9,11 @@
 ************************************************************************************/
 struct TSol
 {
-    std::vector <double> rk;                // random-key vector
-    double ofv;                             // objetive function value
+    std::vector <double> rk;                              // random-key vector
+    double ofv = std::numeric_limits<double>::infinity(); // objetive function value
 
-    double best_time;                      // computational time to find the solution
-    char nameMH[256];                      // name of the metaheuristic that found the solution
+    double best_time = 0.0;                               // computational time to find the solution
+    char nameMH[256];                                     // name of the metaheuristic that found the solution
 };
 
 /***********************************************************************************
