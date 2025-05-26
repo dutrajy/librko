@@ -4,16 +4,15 @@
 #ifndef _PROBLEM_H
 #define _PROBLEM_H
 
-#include "../Main/Data.h"
+//----------------- DEFINITION OF PROBLEM SPECIFIC TYPES ----------------------------
 
-// Variables declared in main.cpp
-extern int n;                               // size of cromossoms
+struct TProblemData
+{
+    int n;                                      // size of the RKO vector 
 
-//----------------- DEFINITION OF PROBLEM SPECIFIC TYPES___ -----------------------
-
-
-//------ DEFINITION OF GLOBAL CONSTANTS AND VARIABLES OF SPECIFIC PROBLEM  --------
-
+    // other variables of the problem at hand
+    
+};
 
 
 //-------------------------- FUNCTIONS OF SPECIFIC PROBLEM --------------------------
@@ -22,11 +21,8 @@ extern int n;                               // size of cromossoms
  Method: ReadData
  Description: read the input data
 *************************************************************************************/
-void ReadData(char nameTable[])
+void ReadData(char name[], TProblemData &data)
 { 
-    char name[200] = "../Instances/";
-    strcat(name,nameTable);
-
     FILE *arq;
     arq = fopen(name,"r");
 
@@ -43,7 +39,7 @@ void ReadData(char nameTable[])
     fclose(arq);
 
     // define the size of the solution vector
-    n = 1;
+    data.n = 1;
 }
 
 
@@ -51,7 +47,7 @@ void ReadData(char nameTable[])
  Method: Decoders
  Description: mapping the random-key solution into a problem solution
 *************************************************************************************/
-double Decoder(TSol s) 
+double Decoder(TSol &s, const TProblemData &data)
 {
     // create a solution of the problem
 
@@ -64,6 +60,6 @@ double Decoder(TSol s)
  Method: FreeMemoryProblem
  Description: Free local memory allocate by Problem
 *************************************************************************************/
-void FreeMemoryProblem(){}
+void FreeMemoryProblem(TProblemData &data){}
 
 #endif
