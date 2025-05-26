@@ -4,8 +4,6 @@
 #ifndef _PROBLEM_H
 #define _PROBLEM_H
 
-// #include "../Main/Data.h"
-
 //----------------- DEFINITION OF PROBLEM SPECIFIC TYPES -----------------------
 
 struct TProblemData
@@ -27,20 +25,14 @@ struct TProblemData
  Method: ReadData
  Description: read the input data
 *************************************************************************************/
-TProblemData ReadData(char nameInstance[])
+void ReadData(char name[], TProblemData &data)
 { 
-    TProblemData data;
-
-    // => read data
-    // char name[200] = "../Instances/";
-    // strcat(name,nameInstance);
-
     FILE *arq;
-    arq = fopen(nameInstance,"r");
+    arq = fopen(name,"r");
 
     if (arq == NULL)
     {
-        printf("\nERROR: File (%s) not found!\n",nameInstance);
+        printf("\nERROR: File (%s) not found!\n",name);
         getchar();
         exit(1);
     }
@@ -65,8 +57,6 @@ TProblemData ReadData(char nameInstance[])
     
     // define the random-key vector size
     data.n = data.nItems;
-
-    return data;
 }
 
 /************************************************************************************
