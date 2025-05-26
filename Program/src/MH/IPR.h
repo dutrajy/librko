@@ -20,8 +20,8 @@ void IPR(const TRunData &runData, const TProblemData &data)
     TSol sCurrent;                                  // current solution in each iteration
     TSol sViz;                                      // neighboring solution in each iteration
 
-    bestPath.ofv = 99999999;
-    bestPath.best_time = 0;
+    bestPath.ofv = std::numeric_limits<double>::infinity();
+    bestPath.best_time = 0.0;
 
     // run the search process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
@@ -129,9 +129,10 @@ void IPR(const TRunData &runData, const TProblemData &data)
         // terminate the search process in MAXTIME
         end_timeMH = get_time_in_seconds();
         currentTime = end_timeMH - start_timeMH;
+
+        // update the pool of solutions
+        UpdatePoolSolutions(bestPath, method, runData.debug);
     }
-    // update the pool of solutions
-    UpdatePoolSolutions(bestPath, method, runData.debug);
 }
 
 #endif
