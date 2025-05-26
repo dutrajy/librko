@@ -69,7 +69,7 @@ int main(int argc, char *argv[ ])
     char nameInstance[256];  
 
     strncpy(nameInstance,argv[1],255);
-    runData.MAXTIME = atoi(argv[2]);  
+    runData.MAXTIME = std::stoi(argv[2]); 
 
     // define the total number of metaheuristics available
     #define TOTAL_MH 11
@@ -167,7 +167,7 @@ int main(int argc, char *argv[ ])
 
     // input: read data of the instance problem
     TProblemData data;     
-    data = ReadData(nameInstance);                                     
+    ReadData(nameInstance, data);      
     
     double foBest = INFINITY,
            foAverage = 0.0;
