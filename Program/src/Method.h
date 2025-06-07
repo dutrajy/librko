@@ -3,7 +3,7 @@
 
 /************************************************************************************
  Method: sortByFitness
- Description: Sort TSol by objective function
+ Description: Sort TSol by the objective function
 *************************************************************************************/
 bool sortByFitness(const TSol &lhs, const TSol &rhs) { return lhs.ofv < rhs.ofv; }
 
@@ -18,7 +18,7 @@ double randomico(double min, double max)
 
 /************************************************************************************
  Method: IRANDOMICO
- Description: Generate a int random number between min and max => [min, max]
+ Description: Generate an int random number between min and max => [min, max]
 *************************************************************************************/
 int irandomico(int min, int max)
 {
@@ -27,7 +27,7 @@ int irandomico(int min, int max)
 
 /************************************************************************************
  Method: get_time_in_seconds
- Description: measure time on Linux/macOS and Windows
+ Description: Measure time on Linux/macOS and Windows
 *************************************************************************************/
 double get_time_in_seconds() {
     #if defined(_WIN32) || defined(_WIN64)
@@ -44,7 +44,7 @@ double get_time_in_seconds() {
 
 /************************************************************************************
  Method: CreateInitialSolutions
- Description: Create a initial random solution
+ Description: Create an initial random solution
 *************************************************************************************/
 void CreateInitialSolutions(TSol &s, const int n)
 {
@@ -58,7 +58,7 @@ void CreateInitialSolutions(TSol &s, const int n)
 
 /************************************************************************************
  Method: CretePoolSolutions
- Description: create a pool of solutions with different solutions
+ Description: Create a pool of solutions with different solutions
 *************************************************************************************/
 void CreatePoolSolutions(const TProblemData &data, const int sizePool)
 {
@@ -70,7 +70,7 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
             pool[i].best_time = get_time_in_seconds();
         }
 
-        // sort pool in increase order of fitness
+        // sort pool in increasing order of fitness
         for (int i = 0; i < sizePool - 1; i++) {
             int minIndex = i;
 
@@ -88,7 +88,7 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
             }
         }
 
-        // verify if exists similar solutions in the pool
+        // verify if similar solutions exist in the pool
         int clone = 0;
         for (int i = sizePool-1; i >0 ; i--){
             if (pool[i].ofv == pool[i-1].ofv){
@@ -101,7 +101,7 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
             }
         }
 
-        // sort pool in increase order of fitness
+        // sort pool in increasing order of fitness
         if (clone)
         {
             for (int i = 0; i < sizePool - 1; i++) {
@@ -126,13 +126,13 @@ void CreatePoolSolutions(const TProblemData &data, const int sizePool)
 
 /************************************************************************************
  Method: UpdatePoolSolutions
- Description: update the pool with different solutions
+ Description: Update the pool with different solutions
 *************************************************************************************/
 void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
 {
     #pragma omp critical
     {   
-        // Checks if s already exists in the pool
+        // Checks if it already exists in the pool
         bool exists = false;
         for (int i = 0; i < (int)pool.size(); i++) {
             if (pool[i].ofv == s.ofv) {
@@ -147,12 +147,6 @@ void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
             // get the current thread ID
             int thread_id = omp_get_thread_num();   
             printf("\nBest solution: %.10lf (Thread: %d - MH: %s)", s.ofv, thread_id, mh);
-    
-            // TTT plot
-            // if (s.ofv <= -149){  // target = -149 for Knapsack problem 
-            //     stop_execution.store(true);                      // stop all threads
-            //     
-            // }
         } 
 
         // Goes from back to front
@@ -177,7 +171,7 @@ void UpdatePoolSolutions(TSol s, const char*  mh, const int debug)
 
 /************************************************************************************
  Method: ShakeSolution
- Description: shake the current solution
+ Description: Shake the current solution
 *************************************************************************************/
 void ShakeSolution(TSol &s, float betaMin, float betaMax, const int n)
 {
@@ -238,7 +232,7 @@ TSol Blending(TSol &s1, TSol &s2, double factor, const int n)
             s.rk[j] = randomico(0,1);
         }
 
-        //copy alelos of top chromossom of the new generation
+        //copy alleles of the top chromosome of the new generation
         else{
             if (randomico(0,1) < 0.5){
                 s.rk[j] = s1.rk[j];
@@ -364,7 +358,7 @@ void NelderMeadSearch(TSol &x1, const TProblemData &data)
         // x_r is NOT better than the x1
         else 
         {    
-            // point_r is better than the second best solution
+            // point_r is better than the second-best solution
             if (x_r.ofv < x2.ofv) 
             {
                 // reflect
@@ -499,14 +493,11 @@ void NelderMeadSearch(TSol &x1, const TProblemData &data)
  Description: swap local search
 *************************************************************************************/
 void SwapLS(TSol &s, const TProblemData &data, const int &strategy, std::vector<int> &RKorder)
-{
-    // strategy of local search (1 = first improvement; 2 = best improvement)
-    // int strategy = 1;                     
-
+{                 
     // define a random order for the neighors
     std::shuffle(RKorder.begin(), RKorder.end(),rng);
 
-    // rate of neigborhood 
+    // rate of neighborhood 
     float rate = 1.0;
     
     // first improvement
@@ -574,14 +565,11 @@ void SwapLS(TSol &s, const TProblemData &data, const int &strategy, std::vector<
  Description: Invert local search
 *************************************************************************************/
 void InvertLS(TSol &s, const TProblemData &data, const int &strategy, std::vector<int> &RKorder)
-{
-    // strategy of local search (1 = first improvement; 2 = best improvement)
-    // const int strategy = 1;           
-
+{         
     // define a random order for the neighors
     std::shuffle(RKorder.begin(), RKorder.end(),rng);
 
-    // rate of neigborhood 
+    // rate of neighborhood 
     float rate = 1.0;
     
     // first improvement
@@ -646,18 +634,15 @@ void InvertLS(TSol &s, const TProblemData &data, const int &strategy, std::vecto
  Description: Farey local search
 *************************************************************************************/
 void FareyLS(TSol &s, const TProblemData &data, const int &strategy, std::vector<int> &RKorder)
-{
-    // strategy of local search (1 = first improvement; 2 = best improvement)
-    // const int strategy = 1;           
-
+{     
     // define a random order for the neighors
     std::shuffle (RKorder.begin(), RKorder.end(),rng);
 
     std::vector<double> F = {0.00, 0.142857, 0.166667, 0.20, 0.25, 0.285714, 0.333333, 0.40, 0.428571, 0.50, 
                              0.571429, 0.60, 0.666667, 0.714286, 0.75, 0.80, 0.833333, 0.857143, 1.0};
                              
-    // rate of neigborhood 
-    float rate = 0.5;
+    // rate of neighborhood 
+    float rate = 1.0;
                    
     // first improvement
     if (strategy == 1)
@@ -711,90 +696,6 @@ void FareyLS(TSol &s, const TProblemData &data, const int &strategy, std::vector
             s = sBest;
         else
             s = sCurrent;
-    }
-}
-
-/************************************************************************************
- Method: Fribonacci LS
- Description: Fibonacci local search
-*************************************************************************************/
-void FibonacciLS(TSol &s, const TProblemData &data, std::vector<int> &RKorder)
-{
-    // define a random order for the neighors
-    std::shuffle (RKorder.begin(), RKorder.end(),rng);
-
-    std::vector<double> Fibonacci = {0.01,
-                                     0.02,
-                                     0.03,
-                                     0.05,
-                                     0.08,
-                                     0.13,
-                                     0.21,
-                                     0.34,
-                                     0.55,
-                                     0.89};
-    TSol sBest = s;
-    for(int i = 0; i < data.n; i++) {
-        double rk = s.rk[RKorder[i]];
-        for (int j=0; j<(int)Fibonacci.size(); j++){
-            // generate a random value between actual value and fibonacci j
-            double newrk = randomico(rk, rk+Fibonacci[j]);
-            
-            if (newrk < 1.0)
-            {
-                s.rk[RKorder[i]] = newrk;
-                s.ofv = Decoder(s, data);
-
-                if (s.ofv < sBest.ofv){
-                    sBest = s;
-                    return;
-                }
-                else{
-                    s = sBest;
-                }
-            }
-
-            newrk = randomico(rk, rk-Fibonacci[j]);
-            if (newrk >= 0)
-            {
-                s.rk[RKorder[i]] = newrk;
-                s.ofv = Decoder(s, data);
-
-                if (s.ofv < sBest.ofv){
-                    sBest = s;
-                    return;
-                }
-                else{
-                    s = sBest;
-                }
-            }
-        }
-    }
-}
-
-/************************************************************************************
- Method: 2-Opt LS
- Description: 2-Opt local search
-*************************************************************************************/
-void TwoOptLS(TSol &s, const TProblemData &data)
-{
-    TSol sBest = s;
-
-    for(int i = 0; i < data.n-2; i++) {
-        for(int j = i+2; j < data.n; j++) {        
-            // invert sequence between i and j
-            std::reverse(s.rk.begin()+i,s.rk.begin()+j);
-
-            s.ofv = Decoder(s, data);
-
-            if (s.ofv < sBest.ofv){
-                sBest = s;
-                // return;
-            }
-            else{
-                s = sBest;
-            }
-        }
     }
 }
 
@@ -857,7 +758,7 @@ void RVND(TSol &s, const TProblemData &data, const int &strategy, std::vector<in
                 break;
         }
 
-        // we better the current solution
+        // s is better than the current solution
         if (s.ofv < foCurrent){
             // refresh NSL
             NSL.clear();
@@ -872,7 +773,7 @@ void RVND(TSol &s, const TProblemData &data, const int &strategy, std::vector<in
 
 /************************************************************************************
  Method: readParameters
- Description: read the parameter values of the MH
+ Description: Read the parameter values of the MH
 *************************************************************************************/
 void readParameters(const char*  method, int control, 
                     std::vector<std::vector<double>> &parameters, int numPar)
