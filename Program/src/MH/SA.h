@@ -5,7 +5,7 @@
  Method: SA
  Description: search process of the Simulated Annealing
 *************************************************************************************/
-void SA(const TRunData &runData, const TProblemData &data)
+void SA(const TRunData &runData, const Problem& problem)
 {
     const char* method = "SA";
     TSol s;                                  // current solution
@@ -30,7 +30,7 @@ void SA(const TRunData &runData, const TProblemData &data)
     double end_timeMH = get_time_in_seconds();      // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     // Q-Learning parameters
@@ -44,7 +44,7 @@ void SA(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -69,18 +69,18 @@ void SA(const TRunData &runData, const TProblemData &data)
     }
 
     // online control
-    else 
+    else
     {
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -96,8 +96,8 @@ void SA(const TRunData &runData, const TProblemData &data)
     }
 
     // Create the initial solution with random keys
-    CreateInitialSolutions(s, data.n); 
-    s.ofv = Decoder(s, data);
+    CreateInitialSolutions(s, problem.dimension);
+    s.ofv = problem.decode(s);
     sBest = s;
 
     // run the search process until stop criterion
@@ -108,10 +108,10 @@ void SA(const TRunData &runData, const TProblemData &data)
         else T = T0*0.3;
         while (T > 0.0001 && currentTime < runData.MAXTIME*runData.restart)
         {
-            // Q-Learning 
+            // Q-Learning
             if (runData.control == 1){
-                // set Q-Learning parameters  
-                SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+                // set Q-Learning parameters
+                SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
                 // choose a action at for current state st
                 at = ChooseAction(S, st, epsilon);
@@ -121,29 +121,29 @@ void SA(const TRunData &runData, const TProblemData &data)
 
                 // define the parameters according of the current state
                 SAmax   = (int)S[iCurr].par[0];
-                alphaSA = S[iCurr].par[1];     
+                alphaSA = S[iCurr].par[1];
                 betaMin = S[iCurr].par[2];
-                betaMax = S[iCurr].par[3];           
+                betaMax = S[iCurr].par[3];
             }
-            
+
             bestOFV = INFINITY;
             while (IterT < SAmax && currentTime < runData.MAXTIME*runData.restart)
             {
-                if (stop_execution.load()) return;      
-                
+                if (stop_execution.load()) return;
+
                 IterT++;
 
                 // Shake the current solution
                 sViz = s;
-                ShakeSolution(sViz, betaMin, betaMax, data.n);
+                ShakeSolution(sViz, betaMin, betaMax, problem.dimension);
 
                 // calculate the OFV
-                sViz.ofv = Decoder(sViz, data);
-                
+                sViz.ofv = problem.decode(sViz);
+
                 // value function is the best solution found in this iteration
                 if (sViz.ofv < bestOFV)
                     bestOFV = sViz.ofv;
-                
+
                 // calculate the delta SA
                 delta = sViz.ofv - s.ofv;
 
@@ -168,7 +168,7 @@ void SA(const TRunData &runData, const TProblemData &data)
                     // metropolis criterion
                     double x = randomico(0,1);
 
-                    if ( x < (exp(-delta/T)) )       
+                    if ( x < (exp(-delta/T)) )
                         s = sViz;
                 }
             } //End-SAmax
@@ -176,7 +176,7 @@ void SA(const TRunData &runData, const TProblemData &data)
             // if (runData.debug)
             // printf("\nT: %lf \t current solution: %lf \t best solution: %lf", T, s.ofv, sBest.ofv);
 
-            // Q-Learning 
+            // Q-Learning
             if (runData.control == 1){
                 // The reward function is based on improvement of the current best fitness and binary reward
                 if (improv){
@@ -191,7 +191,7 @@ void SA(const TRunData &runData, const TProblemData &data)
                 int st_1 = S[st].Ai[at];
 
                 // Update the Q-Table value
-                S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+                S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
                 if (S[st].Qa[at] > S[st].maxQ)
                 {
@@ -210,7 +210,7 @@ void SA(const TRunData &runData, const TProblemData &data)
             // apply local search
             sViz = s;
             // RVND(sViz, data, runData.strategy, RKorder);
-            NelderMeadSearch(sViz, data);
+            NelderMeadSearch(sViz, problem);
 
             // update the best solution found by SA
             if (sViz.ofv < sBest.ofv)
@@ -224,7 +224,7 @@ void SA(const TRunData &runData, const TProblemData &data)
             // terminate the search process in MAXTIME
             end_timeMH = get_time_in_seconds();
             currentTime = end_timeMH - start_timeMH;
-            
+
         } //Fim-T
 
         // reanneling

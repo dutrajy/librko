@@ -5,62 +5,62 @@
  Method: UpdatePopulationSize
  Description: update the size of the population according the current state
 *************************************************************************************/
-static void UpdateParticleSize(std::vector <TSol> &X, std::vector <TSol> &Pbest, std::vector <std::vector <float> > &V, TSol Gbest, int Psize,  
-                              float c1, float c2, float w, const TProblemData &data)
+static void UpdateParticleSize(std::vector <TSol> &X, std::vector <TSol> &Pbest, std::vector <std::vector <float> > &V, TSol Gbest, int Psize,
+                              float c1, float c2, float w, const Problem& problem)
 {
     // size of the current population
     int oldPsize = X.size();
 
-    // pruning 
+    // pruning
     if (oldPsize > Psize){
         X.resize(Psize);
         Pbest.resize(Psize);
         V.resize(Psize);
     }
 
-    // generate new particles 
+    // generate new particles
     else if (oldPsize < Psize){
         X.resize(Psize);
         Pbest.resize(Psize);
-        V.resize(Psize, std::vector<float>(data.n));
+        V.resize(Psize, std::vector<float>(problem.dimension));
 
-        // Create the initial particles with random keys 
+        // Create the initial particles with random keys
         for (int i=oldPsize; i<Psize; i++)
         {
             // initialize X[i]
-            CreateInitialSolutions(X[i], data.n); 
+            CreateInitialSolutions(X[i], problem.dimension);
 
             // initialize Pbest
-            Pbest[i] = X[i];    
+            Pbest[i] = X[i];
 
             // initialize V[i][j]
-            for (int j=0; j<data.n; j++)
+            for (int j=0; j<problem.dimension; j++)
                 V[i][j] = randomico(0,1);
 
-            for (int j=0; j<data.n; j++)
+            for (int j=0; j<problem.dimension; j++)
             {
                 float r1 = randomico(0,1);
                 float r2 = randomico(0,1);
 
                 // update v[i][j] com fator de constricao
-                V[i][j] = w * (V[i][j] + (c1 * r1 * (Pbest[i].rk[j] - X[i].rk[j])) + 
+                V[i][j] = w * (V[i][j] + (c1 * r1 * (Pbest[i].rk[j] - X[i].rk[j])) +
                                          (c2 * r2 * (Gbest.rk[j] - X[i].rk[j])));
-                
+
                 // update X[i][j]
                 double oldrk = X[i].rk[j];
-                X[i].rk[j] = X[i].rk[j] + V[i][j];  
+                X[i].rk[j] = X[i].rk[j] + V[i][j];
 
                 if (X[i].rk[j] < 0.0 || X[i].rk[j] >= 1.0) {
-                    X[i].rk[j] = oldrk; 
+                    X[i].rk[j] = oldrk;
                     V[i][j] = 0;
                 }
             }
 
             // fitness of X[i]
-            X[i].ofv = Decoder(X[i], data);
+            X[i].ofv = problem.decode(X[i]);
 
             // update Pbest
-            Pbest[i] = X[i];    
+            Pbest[i] = X[i];
         }
     }
 }
@@ -69,7 +69,7 @@ static void UpdateParticleSize(std::vector <TSol> &X, std::vector <TSol> &Pbest,
  Method: PSO
  Description: search process of the Particle Swarm Optimization
 *************************************************************************************/
-void PSO(const TRunData &runData, const TProblemData &data)
+void PSO(const TRunData &runData, const Problem& problem)
 {
     const char* method = "PSO";
     int Psize = 0;                           // number of particles
@@ -78,7 +78,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
     float w = 0.0;
 
     std::vector <TSol> X;                    // current solutions
-    std::vector <TSol> Pbest;                // best solutions 
+    std::vector <TSol> Pbest;                // best solutions
     std::vector <std::vector <float> > V;    // particle velocity
 
     TSol Gbest;                              // global best solution
@@ -94,7 +94,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
     double end_timeMH = get_time_in_seconds();      // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     // Q-Learning parameters
@@ -108,7 +108,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -133,16 +133,16 @@ void PSO(const TRunData &runData, const TProblemData &data)
 
     // online control
     else{
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -153,29 +153,29 @@ void PSO(const TRunData &runData, const TProblemData &data)
             c2 = S[iCurr].par[2];
             w  = S[iCurr].par[3];
         }
-    }  
+    }
 
     // initialize population
-    X.clear(); 
+    X.clear();
     Pbest.clear();
-    V.clear(); 
+    V.clear();
 
     X.resize(Psize);
     Pbest.resize(Psize);
-    V.resize(Psize, std::vector<float>(data.n));
+    V.resize(Psize, std::vector<float>(problem.dimension));
 
-    // Create the initial particles with random keys 
+    // Create the initial particles with random keys
     Gbest.ofv = INFINITY;
     for (int i=0; i<Psize; i++)
     {
         // initialize X[i]
-        CreateInitialSolutions(X[i], data.n); 
+        CreateInitialSolutions(X[i], problem.dimension);
 
         // fitness of X[i]
-        X[i].ofv = Decoder(X[i], data);
+        X[i].ofv = problem.decode(X[i]);
 
         // initialize V[i][j]
-        for (int j=0; j<data.n; j++)
+        for (int j=0; j<problem.dimension; j++)
             V[i][j] = randomico(0,1);
 
         // initialize Gbest
@@ -183,9 +183,9 @@ void PSO(const TRunData &runData, const TProblemData &data)
             Gbest = X[i];
 
         // initialize Pbest
-        Pbest[i] = X[i];    
+        Pbest[i] = X[i];
     }
-    
+
     // run the evolutionary process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
     {
@@ -193,10 +193,10 @@ void PSO(const TRunData &runData, const TProblemData &data)
         numGenerations++;
 
         // define the parameters considering the current state and evolve a new iteration of the PSO
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -208,9 +208,9 @@ void PSO(const TRunData &runData, const TProblemData &data)
             Psize = (int)S[iCurr].par[0];
             c1 = S[iCurr].par[1];
             c2 = S[iCurr].par[2];
-            w  = S[iCurr].par[3];         
+            w  = S[iCurr].par[3];
 
-            UpdateParticleSize(X, Pbest, V, Gbest, Psize, c1, c2, w, data);
+            UpdateParticleSize(X, Pbest, V, Gbest, Psize, c1, c2, w, problem);
         }
 
         // generate new population
@@ -218,34 +218,34 @@ void PSO(const TRunData &runData, const TProblemData &data)
         double media = 0;
         for (int i=0; i<Psize; i++)
         {
-            if (stop_execution.load()) return;      
+            if (stop_execution.load()) return;
 
-            double probUpdate = 1.0; 
+            double probUpdate = 1.0;
 
             // update particles X[i]
-            for (int j=0; j<data.n; j++)
+            for (int j=0; j<problem.dimension; j++)
             {
                 float r1 = randomico(0,1);
                 float r2 = randomico(0,1);
 
                 // update v[i][j] com fator de constricao
-                V[i][j] = w * (V[i][j] + (c1 * r1 * (Pbest[i].rk[j] - X[i].rk[j])) + 
+                V[i][j] = w * (V[i][j] + (c1 * r1 * (Pbest[i].rk[j] - X[i].rk[j])) +
                                          (c2 * r2 * (Gbest.rk[j] - X[i].rk[j])));
-                
+
                 if (randomico(0,1) < probUpdate){
                     // update X[i][j]
                     double oldrk = X[i].rk[j];
-                    X[i].rk[j] = X[i].rk[j] + V[i][j];  
+                    X[i].rk[j] = X[i].rk[j] + V[i][j];
 
                     if (X[i].rk[j] < 0.0 || X[i].rk[j] >= 1.0) {
-                        X[i].rk[j] = oldrk; 
+                        X[i].rk[j] = oldrk;
                         V[i][j] = 0;
                     }
                 }
             }
 
             // fitness
-            X[i].ofv = Decoder(X[i], data);
+            X[i].ofv = problem.decode(X[i]);
 
             // set the best ofv found in this generation
             if (X[i].ofv < bestOFcurrent){
@@ -257,29 +257,29 @@ void PSO(const TRunData &runData, const TProblemData &data)
                 Pbest[i] = X[i];
             }
 
-            // set Gbest 
+            // set Gbest
             if (X[i].ofv < Gbest.ofv){
                 Gbest = X[i];
-                bestGeneration = numGenerations;    
+                bestGeneration = numGenerations;
                 improv = 1;
             }
 
             media += X[i].ofv;
-        } 
+        }
 
         // local search
         double oldGbest = Gbest.ofv;
         int chosen = irandomico(0,Psize-1);
-        NelderMeadSearch(Pbest[chosen], data);
-        
+        NelderMeadSearch(Pbest[chosen], problem);
+
         // update global best particle
         if (Pbest[chosen].ofv < Gbest.ofv){
             Gbest = Pbest[chosen];
-            bestGeneration = numGenerations; 
-            improv = 1;   
+            bestGeneration = numGenerations;
+            improv = 1;
         }
 
-        // if (runData.debug) 
+        // if (runData.debug)
         // printf("\nGen: %d \t sBest: %lf \t media: %lf", numGenerations, Gbest.ofv, media/Psize);
 
         if (bestGeneration == numGenerations || Gbest.ofv < oldGbest){
@@ -287,7 +287,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
             UpdatePoolSolutions(Gbest, method, runData.debug);
         }
 
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // The reward function is based on improvement of the current best fitness and binary reward
             if (improv){
@@ -304,7 +304,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // Update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {
@@ -315,7 +315,7 @@ void PSO(const TRunData &runData, const TProblemData &data)
             // Define the new current state st
             st = st_1;
         }
-        
+
         // terminate the evolutionary process in MAXTIME
         end_timeMH = get_time_in_seconds();
         currentTime = end_timeMH - start_timeMH;

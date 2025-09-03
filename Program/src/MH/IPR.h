@@ -5,7 +5,7 @@
  Method: IPR()
  Description: Apply the Implicit Path Relinking method
 *************************************************************************************/
-void IPR(const TRunData &runData, const TProblemData &data)
+void IPR(const TRunData &runData, const Problem& problem)
 {
     const char* method = "IPR";
 
@@ -34,23 +34,23 @@ void IPR(const TRunData &runData, const TProblemData &data)
         }
         while (k1 == k2);
 
-        TSol atual = pool[k1];                      
-        TSol guia = pool[k2];                       
+        TSol atual = pool[k1];
+        TSol guia = pool[k2];
 
-        TSol bestPath = atual;                 
-        TSol bestIteration = atual;                
-        TSol sCurrent = atual;                     
-        TSol sViz = atual;                          
+        TSol bestPath = atual;
+        TSol bestIteration = atual;
+        TSol sCurrent = atual;
+        TSol sViz = atual;
 
         int direction = 1;                          // internal (1) or external (-1) IPR
 
-        int blockSize = data.n*0.10;                // block size
-        int numBlock = data.n/blockSize;            // number of blocks
+        int blockSize = problem.dimension*0.10;     // block size
+        int numBlock = problem.dimension/blockSize; // number of blocks
         std:: vector<int> fixedBlock(numBlock,1);   // binary vector indicating whether a block will be swapped (0) or not (1)
         int dist=0;                                 // number of different rk
 
         // calculates the difference between the solutions (measured by the number of different blocks)
-        for (int i=0; i<data.n; i++)
+        for (int i=0; i<problem.dimension; i++)
         {
             if (atual.rk[i] != guia.rk[i]){
                 fixedBlock[i%numBlock] = 0;
@@ -60,7 +60,7 @@ void IPR(const TRunData &runData, const TProblemData &data)
 
         // printf("\nGuia: %lf \t Atual: %lf [%d] >> ", guia.ofv, atual.ofv, dist);
 
-        // if there is a difference between the solutions 
+        // if there is a difference between the solutions
         if (dist > 0)
         {
             // 'zero out' the best solution on the path and carry out the search
@@ -84,13 +84,13 @@ void IPR(const TRunData &runData, const TProblemData &data)
 
                         // generate a neighbor of the current solution
                         sViz = sCurrent;
-                        for (int k=initialBlock; k<finalBlock && k<data.n; k++)
+                        for (int k=initialBlock; k<finalBlock && k<problem.dimension; k++)
                         {
                             // internal PR
                             if (direction == 1){
                                 sViz.rk[k] = guia.rk[k];
                             }
-                            
+
                             // external PR
                             else
                             if (direction == -1){
@@ -98,7 +98,7 @@ void IPR(const TRunData &runData, const TProblemData &data)
                             }
 
                         }
-                        sViz.ofv = Decoder(sViz, data);
+                        sViz.ofv = problem.decode(sViz);
                         // printf("\n%.0lf, ",sViz.ofv);
 
                         // check if it is the best solution of the iteration
@@ -115,7 +115,7 @@ void IPR(const TRunData &runData, const TProblemData &data)
                     bestPath = bestIteration;
                     // printf("%.0lf, ",bestPath.ofv);
                 }
-                
+
                 if (bestBlock >= 0){
                     // continue the search from the best solution of the iteration
                     sCurrent = bestIteration;

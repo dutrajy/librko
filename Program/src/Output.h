@@ -14,22 +14,22 @@
  Metodo: WriteSolutionScreen
  Description: Outputs the solution to the screen using the Decoder.
 *************************************************************************************/
-void WriteSolutionScreen(const char *algorithms[], int numMH, TSol s, 
-						 float timeBest, float timeTotal, char instance[], 
-						 const TProblemData &data, std::vector <TSol> pool)
+void WriteSolutionScreen(const char *algorithms[], int numMH, TSol s,
+						 float timeBest, float timeTotal, char instance[],
+						 const Problem& problem, std::vector <TSol> pool)
 {
 	printf("\n\n\nRKO: ");
 	for (int i=0; i<numMH; i++)
 		printf("%s | ", algorithms[i]);
 	printf("\nBest MH: %s \nInstance: %s \nsol: ", s.nameMH, instance);
-	for (int i=0; i<data.n; i++)
+	for (int i=0; i<problem.dimension; i++)
 		printf("%.3lf ", s.rk[i]);
 
-	printf("\nofv: %.5lf", s.ofv); 
+	printf("\nofv: %.5lf", s.ofv);
 	printf("\nTotal time: %.3f",timeTotal);
 	printf("\nBest time: %.3f\n\n",timeBest);
 
-	// print solution pool 
+	// print solution pool
 	printf("\nSolution Pool:\n");
 	for (int i = 0; i< (int)pool.size(); i++)
 		printf("%.5lf [%s]\n", pool[i].ofv, pool[i].nameMH);
@@ -39,15 +39,15 @@ void WriteSolutionScreen(const char *algorithms[], int numMH, TSol s,
  Metodo: WriteSolution
  Description: Outputs the solution in a txt file using the Decoder.
 *************************************************************************************/
-void WriteSolution(const char *algorithms[], int numMH, TSol s, 
-				   float timeBest, float timeTotal, char instance[], 
-				   const TProblemData &data)
+void WriteSolution(const char *algorithms[], int numMH, TSol s,
+				   float timeBest, float timeTotal, char instance[],
+				   const Problem& problem)
 {
 	char name[256]="../Results/Solutions_RKO";
 	strcat(name,".txt");
 
 	// file to write the best solution found
-	FILE *solFile;                              
+	FILE *solFile;
 
     solFile = fopen(name,"a");
 
@@ -64,7 +64,7 @@ void WriteSolution(const char *algorithms[], int numMH, TSol s,
 		fprintf(solFile,"%s | ", algorithms[i]);
 
 	fprintf(solFile,"\nSol: ");
-	for (int i=0; i<data.n; i++)
+	for (int i=0; i<problem.dimension; i++)
 		fprintf(solFile,"%.3lf ", s.rk[i]);
 
 	fprintf(solFile,"\nofv: %lf", s.ofv);
@@ -78,8 +78,8 @@ void WriteSolution(const char *algorithms[], int numMH, TSol s,
  Metodo: WriteResults
  Description: Outputs the results in a csv file.
 *************************************************************************************/
-void WriteResults(const char *algorithms[], int numMH, double ofv, 
-				  double ofvAverage, std::vector <double> ofvs, float timeBest, 
+void WriteResults(const char *algorithms[], int numMH, double ofv,
+				  double ofvAverage, std::vector <double> ofvs, float timeBest,
 				  float timeTotal, char instance[])
 {
 	char name[256]="../Results/Results_RKO";
@@ -100,7 +100,7 @@ void WriteResults(const char *algorithms[], int numMH, double ofv,
 
     fprintf(File,"\t%d", (int)ofvs.size());
     for (unsigned int i=0; i<ofvs.size(); i++){
-        fprintf(File,"\t%lf", ofvs[i]);   
+        fprintf(File,"\t%lf", ofvs[i]);
 	}
 	fprintf(File,"\t%lf", ofv);
 	fprintf(File,"\t%lf", ofvAverage);

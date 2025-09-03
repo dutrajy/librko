@@ -1,12 +1,14 @@
 #ifndef _BRKGA_H
 #define _BRKGA_H
 
+#include "../Problem.h"
+
 /************************************************************************************
  Method: PARAMETRICUNIFORMCROSSOVER
  Description: create a new offspring with parametric uniform crossover
 *************************************************************************************/
 static TSol PUX(int eliteSize, int popSize, double rhoe, std::vector <TSol> &Pop, const int n)
-{	
+{
 	TSol s;
 
     int eliteParent = irandomico(0, eliteSize - 1);                 // one chromosome from elite set
@@ -34,14 +36,14 @@ static TSol PUX(int eliteSize, int popSize, double rhoe, std::vector <TSol> &Pop
  Method: UpdatePopulationSize
  Description: update the size of the population according the current state
 *************************************************************************************/
-static void UpdatePopSize(int p, double pe, double pm, double rhoe, std::vector <TSol> &Pop, std::vector <TSol> &PopInter, const TProblemData &data)
+static void UpdatePopSize(int p, double pe, double pm, double rhoe, std::vector <TSol> &Pop, std::vector <TSol> &PopInter, const Problem& problem)
 {
     // *** define the new population size
 
     // size of the current population
     int oldPsize = Pop.size();
 
-    // proportional pruning 
+    // proportional pruning
     if (oldPsize > p){
 
         // copy the current population
@@ -68,8 +70,8 @@ static void UpdatePopSize(int p, double pe, double pm, double rhoe, std::vector 
         PopInter.clear();
         PopInter.resize(p);
     }
-    
-    // generate new chromosomes 
+
+    // generate new chromosomes
     else if (oldPsize < p){
 
         // define new size of Pop
@@ -78,15 +80,15 @@ static void UpdatePopSize(int p, double pe, double pm, double rhoe, std::vector 
         // generate new chromosomes
         for (int k = oldPsize; k < p; k++)
         {
-            if (stop_execution.load()) return;      
-            
-        	Pop[k] = PUX((int)(oldPsize*pe), oldPsize-1, rhoe, Pop, data.n);
-            Pop[k].ofv = Decoder(Pop[k], data);
+            if (stop_execution.load()) return;
+
+        	Pop[k] = PUX((int)(oldPsize*pe), oldPsize-1, rhoe, Pop, problem.dimension);
+            Pop[k].ofv = problem.decode(Pop[k]);
         }
 
         // sort new population
         sort(Pop.begin(), Pop.end(), sortByFitness);
-        
+
         // clean intermediate population
         PopInter.clear();
         PopInter.resize(p);
@@ -97,14 +99,14 @@ static void UpdatePopSize(int p, double pe, double pm, double rhoe, std::vector 
  Method: BRKGA
  Description: search process of the BRKGA
 *************************************************************************************/
-void BRKGA(const TRunData &runData, const TProblemData &data)
+void BRKGA(const TRunData &runData, const Problem& problem)
 {
     const char* method = "BRKGA";
     int p = 0;          	                    // size of population
     double pe = 0.0;              	            // fraction of population to be the elite-set
     double pm = 0.0;          	                // fraction of population to be replaced by mutants
     double rhoe = 0.0;              	        // probability that offspring inherit an allele from elite parent
- 
+
     std::vector <TSol> Pop;                     // current population
     std::vector <TSol> PopInter;                // intermediary population
     TSol bestInd;                               // best individual found in past generation
@@ -118,7 +120,7 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
     double end_timeMH = get_time_in_seconds();  // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     // Q-Learning parameters
@@ -132,7 +134,7 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -156,48 +158,48 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
 
     // online control
     else {
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
 
             // define the initial parameters of the BRGKA
             p    = (int)S[iCurr].par[0];
-            pe   = S[iCurr].par[1];                                                         
-            pm   = S[iCurr].par[2];                                                    
+            pe   = S[iCurr].par[1];
+            pm   = S[iCurr].par[2];
             rhoe = S[iCurr].par[3];
         }
     }
-    
+
     // initialize population
-    Pop.clear(); 
-    PopInter.clear(); 
+    Pop.clear();
+    PopInter.clear();
     Pop.resize(p);
     PopInter.resize(p);
 
     // Create the initial chromosomes with random keys
     for (int i=0; i<p; i++)
     {
-        CreateInitialSolutions(Pop[i], data.n); 
-        Pop[i].ofv = Decoder(Pop[i], data);
+        CreateInitialSolutions(Pop[i], problem.dimension);
+        Pop[i].ofv = problem.decode(Pop[i]);
         PopInter[i] = Pop[i];
     }
-    
+
     // sort population in increase order of fitness
     sort(Pop.begin(), Pop.end(), sortByFitness);
 
     // save the best solution found
     bestInd = Pop[0];
-    
+
     // run the evolutionary process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
     {
@@ -206,8 +208,8 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
 
         // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -217,79 +219,79 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
 
             // define the parameters of the BRGKA according of the current state
             p       = (int)S[iCurr].par[0];
-            pe      = S[iCurr].par[1];                                                         
-            pm      = S[iCurr].par[2];                                                    
-            rhoe    = S[iCurr].par[3]; 
-            
-            // update population size                                                 
-            UpdatePopSize(p, pe, pm, rhoe, Pop, PopInter, data);                    
+            pe      = S[iCurr].par[1];
+            pm      = S[iCurr].par[2];
+            rhoe    = S[iCurr].par[3];
+
+            // update population size
+            UpdatePopSize(p, pe, pm, rhoe, Pop, PopInter, problem);
         }
 
 
         // The 'Pe' best chromosomes are maintained, so we just copy these into PopInter:
         for (int i=0; i<(int)(p*pe); i++){
             // copy the chromosome for next generation
-            PopInter[i] = Pop[i]; 
-        }  
+            PopInter[i] = Pop[i];
+        }
 
         // We'll mate 'p - pe - pm' pairs; initially, i = pe, so we need to iterate until i < p - pm:
         TSol bestOff;
         bestOff.ofv = INFINITY;
         for (int i = (int)(p*pe); i < p - (int)(p*pm); i++){
-            if (stop_execution.load()) return;      
+            if (stop_execution.load()) return;
 
             // Parametric uniform crossover
-            PopInter[i] = PUX((int)(p*pe), p, rhoe, Pop, data.n);
- 
+            PopInter[i] = PUX((int)(p*pe), p, rhoe, Pop, problem.dimension);
+
             // Calculate the fitness of new chromosomes
-            PopInter[i].ofv = Decoder(PopInter[i], data); 
+            PopInter[i].ofv = problem.decode(PopInter[i]);
 
             if (PopInter[i].ofv < bestOff.ofv){
                 bestOff = PopInter[i];
             }
         }
-        
+
         // We'll introduce 'pm' mutants:
         for (int i = p - (int)(p*pm) - (int)(p*pe); i < p; i++){
-            if (stop_execution.load()) return;      
-            
-            CreateInitialSolutions(PopInter[i], data.n);
-            PopInter[i].ofv = Decoder(PopInter[i], data); 
+            if (stop_execution.load()) return;
+
+            CreateInitialSolutions(PopInter[i], problem.dimension);
+            PopInter[i].ofv = problem.decode(PopInter[i]);
             // avoid calculate the fitness of the mutants
-            // PopInter[i].ofv = INFINITY;             
-        }  
-                
+            // PopInter[i].ofv = INFINITY;
+        }
+
         // Update the current population
-        Pop = PopInter;   
+        Pop = PopInter;
 
         // Appy local search in one elite solution
         int pos = irandomico(0, (int)p*pe);
-        NelderMeadSearch(Pop[pos], data);
+        NelderMeadSearch(Pop[pos], problem);
 
         // Sort population in increase order of fitness
         sort(Pop.begin(), Pop.end(), sortByFitness);
-        
-        // We improve the best fitness in the current population 
+
+        // We improve the best fitness in the current population
         if (Pop[0].ofv < bestInd.ofv){
             bestGeneration = numGenerations;
             improv = 1;
             bestInd = Pop[0];
-        
+
             // Update pool of solutions
             UpdatePoolSolutions(Pop[0], method, runData.debug);
         }
 
-        // if (runData.debug) 
+        // if (runData.debug)
         // printf("\nGen: %d [%d %.2lf %.2lf %.2lf] \t best ind: %lf \t off: %lf", numGenerations, p, pe, pm, rhoe, bestInd.ofv, bestOff.ofv);
 
         // Q-Learning
         if (runData.control == 1){
-            // We improve the best fitness in the current population 
+            // We improve the best fitness in the current population
             if (improv){
                 // The reward function is based on improvement of the current best fitness and binary reward
-                R = 1 + 1/p;                                        
+                R = 1 + 1/p;
                 improv = 0;
-            }    
+            }
             else{
                 R = (bestInd.ofv - bestOff.ofv)/bestInd.ofv;
             }
@@ -298,7 +300,7 @@ void BRKGA(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // Update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {

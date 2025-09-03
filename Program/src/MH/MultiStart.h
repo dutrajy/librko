@@ -1,7 +1,7 @@
 #ifndef _MultiStart_H
 #define _MultiStart_H
 
-void MultiStart(const TRunData &runData, const TProblemData &data)
+void MultiStart(const TRunData &runData, const Problem& problem)
 {
     const char* method = "MultiStart";
     //Multi Start
@@ -16,18 +16,18 @@ void MultiStart(const TRunData &runData, const TProblemData &data)
     double start_timeMH = get_time_in_seconds();    // start computational time
     double end_timeMH = get_time_in_seconds();      // end computational time
 
-    CreateInitialSolutions(s, data.n); 
-    s.ofv = Decoder(s, data);
+    CreateInitialSolutions(s, problem.dimension);
+    s.ofv = problem.decode(s);
     sBest = s;
-    
+
     // run the search process until stop criterion
     while(currentTime < runData.MAXTIME*runData.restart)
     {
-        if (stop_execution.load()) return;      
-        
-        // Create the initial solution with random keys 
-		CreateInitialSolutions(s, data.n); 
-        s.ofv = Decoder(s, data);
+        if (stop_execution.load()) return;
+
+        // Create the initial solution with random keys
+		CreateInitialSolutions(s, problem.dimension);
+        s.ofv = problem.decode(s);
 
 		if (s.ofv < sBest.ofv)
 		{

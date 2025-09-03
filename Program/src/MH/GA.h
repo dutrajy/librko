@@ -5,29 +5,29 @@
  Method: UpdatePopulationSize
  Description: update the size of the population according the current state
 *************************************************************************************/
-static void UpdatePopulation(int sizePop, std::vector <TSol> &Pop, const TProblemData &data)
+static void UpdatePopulation(int sizePop, std::vector <TSol> &Pop, const Problem& problem)
 {
     // *** define the new population size
 
     // size of the current population
     int oldPsize = Pop.size();
 
-    // pruning 
+    // pruning
     if (oldPsize > sizePop){
 
         // define new size of Pop
         Pop.resize(sizePop);
     }
-    
-    // generate new chromosomes 
+
+    // generate new chromosomes
     else if (oldPsize < sizePop){
         // define new size of Pop
         Pop.resize(sizePop);
 
         for (int k = oldPsize; k < sizePop; k++)
-        {     
-            CreateInitialSolutions(Pop[k], data.n); 
-            Pop[k].ofv = Decoder(Pop[k], data);  
+        {
+            CreateInitialSolutions(Pop[k], problem.dimension);
+            Pop[k].ofv = problem.decode(Pop[k]);
         }
     }
 }
@@ -36,7 +36,7 @@ static void UpdatePopulation(int sizePop, std::vector <TSol> &Pop, const TProble
  Method: GA
  Description: search process of the Genetic Algorithm
 *************************************************************************************/
-void GA(const TRunData &runData, const TProblemData &data)
+void GA(const TRunData &runData, const Problem& problem)
 {
     const char* method = "GA";
     int sizePop = 0;                            // population size
@@ -59,7 +59,7 @@ void GA(const TRunData &runData, const TProblemData &data)
     double end_timeMH = get_time_in_seconds();  // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     // Q-Learning parameters
@@ -73,7 +73,7 @@ void GA(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -96,17 +96,17 @@ void GA(const TRunData &runData, const TProblemData &data)
     }
 
     // online control
-    else {  
-        // Q-Learning 
+    else {
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -114,41 +114,41 @@ void GA(const TRunData &runData, const TProblemData &data)
             // define parameters of SGA
             sizePop  = (int)S[iCurr].par[0];
             probCros = S[iCurr].par[1];
-            probMut  = S[iCurr].par[2]; 
+            probMut  = S[iCurr].par[2];
         }
     }
 
     // initialize population
-    Pop.clear(); 
+    Pop.clear();
     PopNew.clear();
-    PopInter.clear(); 
+    PopInter.clear();
 
     Pop.resize(sizePop);
     PopNew.resize(sizePop);
     PopInter.resize(sizePop);
 
     // Create the initial chromosomes with random keys
-    bestInd.ofv = 9999999999; 
+    bestInd.ofv = 9999999999;
     for (int i=0; i<sizePop; i++)
     {
-        CreateInitialSolutions(Pop[i], data.n); 
-        Pop[i].ofv = Decoder(Pop[i], data);  
+        CreateInitialSolutions(Pop[i], problem.dimension);
+        Pop[i].ofv = problem.decode(Pop[i]);
 
         // set the best individual
         if (Pop[i].ofv < bestInd.ofv)
             bestInd = Pop[i];
     }
-    
+
     // run the evolutionary process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
     {
     	// number of generations
         numGenerations++;
-        
-        // Q-Learning 
+
+        // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -159,9 +159,9 @@ void GA(const TRunData &runData, const TProblemData &data)
             // define the parameters according of the current state
             sizePop  = (int)S[iCurr].par[0];
             probCros = S[iCurr].par[1];
-            probMut  = S[iCurr].par[2]; 
+            probMut  = S[iCurr].par[2];
 
-            UpdatePopulation(sizePop, Pop, data);
+            UpdatePopulation(sizePop, Pop, problem);
         }
 
         // Select parents using the TOURNAMENT selection method
@@ -176,7 +176,7 @@ void GA(const TRunData &runData, const TProblemData &data)
                 p2 = irandomico(0,sizePop-1);
                 p3 = irandomico(0,sizePop-1);
             }while (p1 == p2 || p1 == p3 || p2 == p3);
-            
+
             if ((Pop[p1].ofv < Pop[p2].ofv) && (Pop[p1].ofv < Pop[p3].ofv))
                 melhor = p1;
             else
@@ -185,7 +185,7 @@ void GA(const TRunData &runData, const TProblemData &data)
             else
                 melhor = p3;
 
-            // insert the best individual into the intermediate population 
+            // insert the best individual into the intermediate population
             PopInter[j] = Pop[melhor];
         }
 
@@ -196,7 +196,7 @@ void GA(const TRunData &runData, const TProblemData &data)
         PopNew.resize(sizePop);
         for (int i=0; i<sizePop-1; i=i+2)
         {
-            if (stop_execution.load()) return;      
+            if (stop_execution.load()) return;
 
             PopNew[i] = PopInter[i];
             PopNew[i+1] = PopInter[i+1];
@@ -204,7 +204,7 @@ void GA(const TRunData &runData, const TProblemData &data)
             // check the probability of crossover
             if (randomico(0,1) < probCros)
             {
-                for(int j = 0; j < data.n; j++)
+                for(int j = 0; j < problem.dimension; j++)
                 {
                     // swap the alleles of offspring i
                     if (randomico(0,1) < 0.5){
@@ -218,18 +218,18 @@ void GA(const TRunData &runData, const TProblemData &data)
 
                     // check the probability of making a mutation in each gene of offspring i
                     if (randomico(0,1) <= probMut){
-                        PopNew[i].rk[j] = randomico(0,1); 
+                        PopNew[i].rk[j] = randomico(0,1);
                     }
 
                     // check the probability of making a mutation in each gene of offspring i+1
                     if (randomico(0,1) <= probMut){
-                        PopNew[i+1].rk[j] = randomico(0,1); 
+                        PopNew[i+1].rk[j] = randomico(0,1);
                     }
                 }
 
                 // calculate fitness
-                PopNew[i].ofv   = Decoder(PopNew[i], data);
-                PopNew[i+1].ofv = Decoder(PopNew[i+1], data);
+                PopNew[i].ofv   = problem.decode(PopNew[i]);
+                PopNew[i+1].ofv = problem.decode(PopNew[i+1]);
             }
 
             avrgOff += PopNew[i].ofv + PopNew[i+1].ofv;
@@ -264,7 +264,7 @@ void GA(const TRunData &runData, const TProblemData &data)
 
         // Apply local search in randomly selected solution and assigning it in Pop
         int pos1 = irandomico(0,sizePop-1);
-        NelderMeadSearch(PopNew[pos1], data);
+        NelderMeadSearch(PopNew[pos1], problem);
 
         // set the best individual
         if (PopNew[pos1].ofv < bestInd.ofv){
@@ -274,14 +274,14 @@ void GA(const TRunData &runData, const TProblemData &data)
             // update pool of solutions
             UpdatePoolSolutions(bestInd, method, runData.debug);
         }
-           
+
         // replace the population with offspring
         Pop = PopNew;
 
-        // if (runData.debug) 
+        // if (runData.debug)
         // printf("\nGen: %d \t sBest: %lf \t average: %lf", numGenerations, bestInd.ofv, avrgOff/sizePop);
 
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // The reward function is based on improvement of the current best fitness and binary reward
             if (improv){
@@ -296,7 +296,7 @@ void GA(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // Update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {

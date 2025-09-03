@@ -5,7 +5,7 @@
  Method: VNS
  Description: search process of the Variable Neighborhood Search
 *************************************************************************************/
-void VNS(const TRunData &runData, const TProblemData &data)
+void VNS(const TRunData &runData, const Problem& problem)
 {
     const char* method = "VNS";
     double beta = 0;                    // perturbation rate
@@ -20,14 +20,14 @@ void VNS(const TRunData &runData, const TProblemData &data)
          sLine,                         // neighborhood solution
          sBestLine;                     // best neighborhood solution
 
-    
+
     float currentTime = 0;              // computational time of the search process
 
     double start_timeMH = get_time_in_seconds();    // start computational time
     double end_timeMH = get_time_in_seconds();      // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     // Q-Learning parameters
@@ -41,7 +41,7 @@ void VNS(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -63,16 +63,16 @@ void VNS(const TRunData &runData, const TProblemData &data)
 
     // online control
     else{
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -81,14 +81,14 @@ void VNS(const TRunData &runData, const TProblemData &data)
             kMax    = S[iCurr].par[0];
             betaMin = S[iCurr].par[1];
         }
-    }   
+    }
 
     // Create the initial solution with random keys
     sBest.ofv = INFINITY;
     for (int i=0; i<1; i++)
     {
-        CreateInitialSolutions(s, data.n); 
-        s.ofv = Decoder(s, data);
+        CreateInitialSolutions(s, problem.dimension);
+        s.ofv = problem.decode(s);
         if (s.ofv < sBest.ofv)
             sBest = s;
     }
@@ -96,13 +96,13 @@ void VNS(const TRunData &runData, const TProblemData &data)
     // current solution
     s = sBest;
 
-    // run the search process until stop criterion           
+    // run the search process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
     {
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -112,41 +112,41 @@ void VNS(const TRunData &runData, const TProblemData &data)
 
             // define the parameters according of the current state
             kMax    = S[iCurr].par[0];
-            betaMin = S[iCurr].par[1];              
+            betaMin = S[iCurr].par[1];
         }
 
         // current neighborhood
         int k = 1;
         while (k <= kMax && currentTime < runData.MAXTIME*runData.restart)
         {
-            if (stop_execution.load()) return;      
-            
+            if (stop_execution.load()) return;
+
             Iter++;
-            
+
             //s' <- perturb the best solution in the neighborhood k
             beta = randomico(k*betaMin,(k+1)*betaMin);
 
             // perturb the current solution (s)
             sLine = s;
-            ShakeSolution(sLine, beta, beta, data.n);
+            ShakeSolution(sLine, beta, beta, problem.dimension);
 
             // calculate OFV
-            sLine.ofv = Decoder(sLine, data);
+            sLine.ofv = problem.decode(sLine);
 
             //s*' <- local search (s')
-            sBestLine = sLine; 
-            RVND(sBestLine, data, runData.strategy, RKorder);
+            sBestLine = sLine;
+            RVND(sBestLine, problem, runData.strategy, RKorder);
 
             //s <- acceptance criterion (s,s*', historico)
             if (sBestLine.ofv < s.ofv)
             {
                 s = sBestLine;
-                
-                // update the best solution found in VNS
-                if (s.ofv < sBest.ofv){   
-                    sBest = s;   
 
-                    // return to the first neighborhood structure          
+                // update the best solution found in VNS
+                if (s.ofv < sBest.ofv){
+                    sBest = s;
+
+                    // return to the first neighborhood structure
                     k = 1;
                     IterMelhora = Iter;
                     improv = 1;
@@ -158,16 +158,16 @@ void VNS(const TRunData &runData, const TProblemData &data)
             else
             {
                 // next neighborhood structure
-                k++; 
+                k++;
 
                 // metropolis criterion
                 // if (randomico(0,1) < (exp(-(sBestLine.ofv - s.ofv)/(1000 - 1000*(currentTime / runData.MAXTIME*runData.restart)))) )
                 // {
                 //     s = sBestLine;
-                // } 
+                // }
             }
 
-            // if (runData.debug) 
+            // if (runData.debug)
             // printf("\nIter: %d \t s'Best: %lf \t sBest: %lf \t sBestRun: %.2lf", Iter, sBestLine.ofv, sBest.ofv, pool[0].ofv);
 
             // terminate the search process in MAXTIME
@@ -175,7 +175,7 @@ void VNS(const TRunData &runData, const TProblemData &data)
             currentTime = end_timeMH - start_timeMH;
         }
 
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // The reward function is based on improvement of the current best fitness and binary reward
             if (improv){
@@ -192,7 +192,7 @@ void VNS(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // Update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {

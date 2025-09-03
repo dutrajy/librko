@@ -8,7 +8,7 @@ else ifeq ($(OS), Linux)
     RM := rm -f
     EXE :=
 	CCC = g++
-else ifeq ($(OS), Darwin)  
+else ifeq ($(OS), Darwin)
     RM := rm -f
     EXE :=
 	CCC = g++-14
@@ -44,5 +44,5 @@ debug: clean
 	$(MAKE) $(TARGET) CCC=$(CCC)
 
 # Rule to recompile
-rebuild: 
+rebuild:
 	$(MAKE) debug

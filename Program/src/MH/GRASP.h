@@ -3,12 +3,12 @@
 
 /************************************************************************************
  Method: LineSearch
- Description: Consider the line search in direction ei , where vector ei has zeros 
- in all components except the i-th, where it has value one. The objective function 
+ Description: Consider the line search in direction ei , where vector ei has zeros
+ in all components except the i-th, where it has value one. The objective function
  is evaluated at points x + k·h·ei for k = 0,1,−1,2,−2,... such that li≤xi+k·h≤ui.
  Let k∗ the value of k that minimizes f(x+k·h·ei) subject to li ≤ xi +k·h ≤ ui
 *************************************************************************************/
-static void LineSearch(TSol s, float h, int i, double &bestZ, double &bestF, const TProblemData &data)
+static void LineSearch(TSol s, float h, int i, double &bestZ, double &bestF, const Problem& problem)
 {
     // find the best solution in line
     bestZ = 0;
@@ -29,9 +29,9 @@ static void LineSearch(TSol s, float h, int i, double &bestZ, double &bestF, con
             rk.push_back(s.rk[i] + (-1*tau) * h);
     }
 
-    // (sample greedy) This method is similar to the greedy algorithm, but instead of selecting the best among all possible options, 
-    // it only considers q < m possible insertions (chosen uniformly at random) in each iteration. The most profitable among those is selected. 
-    int q = ceil(log2((int)(1.0/h))) + 1; 
+    // (sample greedy) This method is similar to the greedy algorithm, but instead of selecting the best among all possible options,
+    // it only considers q < m possible insertions (chosen uniformly at random) in each iteration. The most profitable among those is selected.
+    int q = ceil(log2((int)(1.0/h))) + 1;
     if (q > (int)rk.size())
         q = rk.size();
 
@@ -40,11 +40,11 @@ static void LineSearch(TSol s, float h, int i, double &bestZ, double &bestF, con
 
     // calculate the quality of solution s with rk j
     for (int j=0; j<q; j++)
-    {  
-        if (stop_execution.load()) return;      
-        
-        s.rk[i] = rk[j];   
-        s.ofv = Decoder(s, data);
+    {
+        if (stop_execution.load()) return;
+
+        s.rk[i] = rk[j];
+        s.ofv = problem.decode(s);
 
         if (s.ofv < bestF){
             bestZ = s.rk[i];
@@ -57,23 +57,23 @@ static void LineSearch(TSol s, float h, int i, double &bestZ, double &bestF, con
 
 /************************************************************************************
  Method: ConstrutiveGreedyRandomized
- Description: It takes as input a solution vector s. Initially, the procedure allows 
- all coordinates of s to change (i.e. they are called unfixed). In turn, a discrete 
- line search is performed in each unfixed coordinate direction i of s with the other 
+ Description: It takes as input a solution vector s. Initially, the procedure allows
+ all coordinates of s to change (i.e. they are called unfixed). In turn, a discrete
+ line search is performed in each unfixed coordinate direction i of s with the other
  n − 1 coordinates of s held at their current values.
 *************************************************************************************/
-static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TProblemData &data)
+static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const Problem& problem)
 {
-    std::vector<int> UnFixed(data.n);                // store the random-keys not yet fixed
-    std::vector<int> chosenRK;                       // store the random-keys that will be search in the line search
-    std::vector<int> RCL;                            // store the best candidate solutions
-    std::vector<double> z(data.n);                   // store the best value of the random-key i
-    std::vector<double> g(data.n,INFINITY);          // store the value of the ofv with a random-key z_i
+    std::vector<int> UnFixed(problem.dimension);        // store the random-keys not yet fixed
+    std::vector<int> chosenRK;                          // store the random-keys that will be search in the line search
+    std::vector<int> RCL;                               // store the best candidate solutions
+    std::vector<double> z(problem.dimension);           // store the best value of the random-key i
+    std::vector<double> g(problem.dimension,INFINITY);  // store the value of the ofv with a random-key z_i
 
     double min, max;
 
     // minimum and maximum intensity of the construction phase
-    double betaMin = 0.3, 
+    double betaMin = 0.3,
            betaMax = 0.7;
 
     // initialize the points of the solution that can be changed
@@ -83,10 +83,10 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
     double intensity = randomico(betaMin, betaMax);
 
     // index of the random key to be set
-    int kBest = 0;  
-    
+    int kBest = 0;
+
     // while (!UnFixed.empty())
-    for (int j=0; j<data.n*intensity; j++)
+    for (int j=0; j<problem.dimension*intensity; j++)
     {
         // create a list of candidate solutions by perturbing a (not yet 'fixed') rk of the current solution
         min = INFINITY;
@@ -95,7 +95,7 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
         // choose the subset of random keys that will be searched
         chosenRK.clear();
         int kMax = UnFixed.size() * 0.1;
-        if (kMax < 2) 
+        if (kMax < 2)
             kMax = UnFixed.size();
 
         chosenRK = UnFixed;
@@ -104,18 +104,18 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
 
         // line search
         z.clear();
-        z.resize(data.n);
+        z.resize(problem.dimension);
         g.clear();
-        g.resize(data.n,INFINITY);
+        g.resize(problem.dimension,INFINITY);
 
-        for (int k=0; k<kMax; k++) 
+        for (int k=0; k<kMax; k++)
         {
             int i = chosenRK[k];
 
             TSol sAux = s;
-            
+
             // linear search
-            LineSearch(sAux, h, i, z[i], g[i], data);
+            LineSearch(sAux, h, i, z[i], g[i], problem);
 
             // store the best g[i] and the rk that found this g
             if (min > g[i])
@@ -126,8 +126,8 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
         }
 
 
-        // select the best candidate to continue building             
-            
+        // select the best candidate to continue building
+
         // update the current solution
         s.rk[kBest] = z[kBest];
         s.ofv = g[kBest];
@@ -135,7 +135,7 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
         // remove rk k from the UnFixed set
         for (int i=0; i<(int)UnFixed.size(); i++)
         {
-            if (UnFixed[i] == kBest) 
+            if (UnFixed[i] == kBest)
             {
                 UnFixed.erase(UnFixed.begin()+i);
                 break;
@@ -144,14 +144,14 @@ static void ConstrutiveGreedyRandomized(TSol &s, float h, float alpha, const TPr
     }
 
     // update the solution found in the constructive phase
-    s.ofv = Decoder(s, data);
+    s.ofv = problem.decode(s);
 }
 
 /************************************************************************************
  Method: GRASP
  Description: Metaheurist Greedy Randomized Adpative Search Procedura.
 *************************************************************************************/
-void GRASP(const TRunData &runData, const TProblemData &data)
+void GRASP(const TRunData &runData, const Problem& problem)
 {
     const char* method = "GRASP";
     // GRASP parameters
@@ -162,12 +162,12 @@ void GRASP(const TRunData &runData, const TProblemData &data)
 
     float currentTime = 0;                      // computational time of the search process
     int improv = 0;                             // improvement flag
-    
+
     double start_timeMH = get_time_in_seconds();// start computational time
     double end_timeMH = get_time_in_seconds();  // end computational time
 
     std::vector<int> RKorder;                   // define a order for the neighors
-    RKorder.resize(data.n);
+    RKorder.resize(problem.dimension);
     std::iota(RKorder.begin(), RKorder.end(), 0);
 
     float alphaGrasp = 0.1;                     // greedy rate
@@ -186,7 +186,7 @@ void GRASP(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -207,7 +207,7 @@ void GRASP(const TRunData &runData, const TProblemData &data)
     0.00098	    1,024	10.00
     0.00049	    2,048	11.00
     0.00024	    4,096	12.00
-    0.00012	    8,192	13.00 */      
+    0.00012	    8,192	13.00 */
 
     // ** read file with parameter values
     numPar = 3;
@@ -231,10 +231,10 @@ void GRASP(const TRunData &runData, const TProblemData &data)
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -247,18 +247,18 @@ void GRASP(const TRunData &runData, const TProblemData &data)
     }
 
     // create an initial solution
-    CreateInitialSolutions(s, data.n);
-    s.ofv = Decoder(s, data);
+    CreateInitialSolutions(s, problem.dimension);
+    s.ofv = problem.decode(s);
     sBest = s;
 
     int iter = 0;
     // run the search process until stop criterion (maxTime)
     while (currentTime < runData.MAXTIME*runData.restart)
     {
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -267,16 +267,16 @@ void GRASP(const TRunData &runData, const TProblemData &data)
             iCurr = S[st].Ai[at];
 
             // define the parameters according of the current state
-            alphaGrasp = S[iCurr].par[0];  
+            alphaGrasp = S[iCurr].par[0];
             hs = S[iCurr].par[1];
-            he = S[iCurr].par[2];         
+            he = S[iCurr].par[2];
         }
 
         h = hs;
         // noImprov = 0;
         while (h >= he && currentTime < runData.MAXTIME*runData.restart)
         {
-            if (stop_execution.load()) return; 
+            if (stop_execution.load()) return;
 
             iter++;
 
@@ -287,11 +287,11 @@ void GRASP(const TRunData &runData, const TProblemData &data)
 
             // construct a greedy randomized solution
             sLine = s;
-            ConstrutiveGreedyRandomized(sLine, h, alphaGrasp, data);
-            
+            ConstrutiveGreedyRandomized(sLine, h, alphaGrasp, problem);
+
             // apply local search in current solution
             sLineBest = sLine;
-            RVND(sLineBest, data, runData.strategy, RKorder);
+            RVND(sLineBest, problem, runData.strategy, RKorder);
 
             // update the best solution found by GRASP
             if (sLineBest.ofv < sBest.ofv){
@@ -312,20 +312,20 @@ void GRASP(const TRunData &runData, const TProblemData &data)
             }
             else{
                 // Metropolis criterion
-                if ( randomico(0.0,1.0) < (exp(-(sLineBest.ofv - s.ofv)/(100 - 100*(currentTime / runData.MAXTIME*runData.restart)))) ){ 
+                if ( randomico(0.0,1.0) < (exp(-(sLineBest.ofv - s.ofv)/(100 - 100*(currentTime / runData.MAXTIME*runData.restart)))) ){
                     s = sLineBest;
                 }
             }
 
-            // if (runData.debug) 
+            // if (runData.debug)
             // printf("\nIter: %d \t s': %lf \t s'best: %lf \t sBest: %lf", iter, sLine.ofv, sLineBest.ofv, sBest.ofv);
 
             // terminate the search process in MAXTIME
             end_timeMH = get_time_in_seconds();
             currentTime = end_timeMH - start_timeMH;
-        } 
+        }
 
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // The reward function is based on improvement of the current best fitness and binary reward
             if (improv){
@@ -340,7 +340,7 @@ void GRASP(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {

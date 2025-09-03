@@ -1,0 +1,6 @@
+/Program/runTest
+/Program/src/Main/main.o
+
+# Edtiors and IDEs
+.vscode
+.idea

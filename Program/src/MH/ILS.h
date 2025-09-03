@@ -5,7 +5,7 @@
  Method: ILS
  Description: search process of the Iterated Local Search
 *************************************************************************************/
-void ILS(const TRunData &runData, const TProblemData &data)
+void ILS(const TRunData &runData, const Problem& problem)
 {
     const char* method = "ILS";
     int Iter = 0;                                   // count the number of iterations of the ILS
@@ -18,15 +18,15 @@ void ILS(const TRunData &runData, const TProblemData &data)
     double betaMin = 0.0;                           // minimum perturbation
     double betaMax = 0.0;                           // maximum perturbation
 
-    float currentTime = 0;                          // computational time of the search process  
+    float currentTime = 0;                          // computational time of the search process
     int improv = 0;                                 // improvement flag
 
     double start_timeMH = get_time_in_seconds();    // start computational time
     double end_timeMH = get_time_in_seconds();      // end computational time
 
     std::vector<int> RKorder;                       // define a order for the neighors
-    RKorder.resize(data.n);
-    for (int i = 0; i < data.n; i++){
+    RKorder.resize(problem.dimension);
+    for (int i = 0; i < problem.dimension; i++){
         RKorder[i] = i;
     }
 
@@ -41,7 +41,7 @@ void ILS(const TRunData &runData, const TProblemData &data)
     double R=0;                                 // reward
     std::vector <std::vector <TQ> > Q;          // Q-Table
     std::vector<int> ai;                        // actions
-    float epsilon_max = 1.0;                    // maximum epsilon 
+    float epsilon_max = 1.0;                    // maximum epsilon
     float epsilon_min = 0.1;                    // minimum epsilon
     int Ti = 1;                                 // number of epochs performed
     int restartEpsilon = 1;                     // number of restart epsilon
@@ -54,7 +54,7 @@ void ILS(const TRunData &runData, const TProblemData &data)
     parameters.resize(numPar);
 
     readParameters(method, runData.control, parameters, numPar);
-    
+
     // offline control
     if (runData.control == 0){
         betaMin = parameters[0][0];
@@ -63,16 +63,16 @@ void ILS(const TRunData &runData, const TProblemData &data)
 
     // online control
     else{
-        // Q-Learning 
+        // Q-Learning
         if (runData.control == 1){
             // create possible states of the Markov chain
             CreateStates(parameters, numStates, numPar, S);
 
             // number of restart epsilon
-            restartEpsilon = 1;  
+            restartEpsilon = 1;
 
-            // maximum epsilon  
-            epsilon_max = 1.0;  
+            // maximum epsilon
+            epsilon_max = 1.0;
 
             // current state
             iCurr = irandomico(0,numStates-1);
@@ -81,17 +81,17 @@ void ILS(const TRunData &runData, const TProblemData &data)
             betaMin = S[iCurr].par[0];
             betaMax = S[iCurr].par[1];
         }
-    }   
+    }
 
     // number of iterations
     Iter = 0;
 
     // create initial solution
-    CreateInitialSolutions(sBest, data.n); 
-    sBest.ofv = Decoder(sBest, data);
+    CreateInitialSolutions(sBest, problem.dimension);
+    sBest.ofv = problem.decode(sBest);
 
     // apply local search
-    RVND(sBest, data, runData.strategy, RKorder);
+    RVND(sBest, problem, runData.strategy, RKorder);
     UpdatePoolSolutions(sBest, method, runData.debug);
 
     // terminate the search process in MAXTIME
@@ -101,16 +101,16 @@ void ILS(const TRunData &runData, const TProblemData &data)
     // run the search process until stop criterion
     while (currentTime < runData.MAXTIME*runData.restart)
     {
-        if (stop_execution.load()) return;      
-        
+        if (stop_execution.load()) return;
+
         // increase the number of ILS iterations
         Iter++;
-    
+
         // define the parameters considering the current state and evolve a new iteration of the ILS
         // Q-Learning
         if (runData.control == 1){
-            // set Q-Learning parameters  
-            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart); 
+            // set Q-Learning parameters
+            SetQLParameter(currentTime, Ti, restartEpsilon, epsilon_max, epsilon_min, epsilon, lf, df, runData.MAXTIME*runData.restart);
 
             // choose a action at for current state st
             at = ChooseAction(S, st, epsilon);
@@ -120,21 +120,21 @@ void ILS(const TRunData &runData, const TProblemData &data)
 
             // define the parameters according of the current state
             betaMin = S[iCurr].par[0];
-            betaMax = S[iCurr].par[1];                
+            betaMax = S[iCurr].par[1];
         }
-    
+
         // new iteration of the ILS
         sLine = sBest;
 
         // Shake the current solution
-        ShakeSolution(sLine, betaMin, betaMax, data.n);
+        ShakeSolution(sLine, betaMin, betaMax, problem.dimension);
 
         // calculate the OFV
-        sLine.ofv = Decoder(sLine, data);
+        sLine.ofv = problem.decode(sLine);
 
         //s*' <- local search (s')
         sBestLine = sLine;
-        RVND(sBestLine, data, runData.strategy, RKorder);
+        RVND(sBestLine, problem, runData.strategy, RKorder);
 
         //s* <- acceptance criterion (s*, s*', historico)
         if (sBestLine.ofv < sBest.ofv)
@@ -151,10 +151,10 @@ void ILS(const TRunData &runData, const TProblemData &data)
         //     if (randomico(0,1) < (exp(-(sBestLine.ofv - sBest.ofv)/(1000 - 1000*(currentTime / runData.MAXTIME*runData.restart)))) )
         //     {
         //         sBest = sBestLine;
-        //     } 
+        //     }
         // }
 
-        // if (runData.debug) 
+        // if (runData.debug)
         // printf("\nIter: %d [%.3lf %.3lf] \t s'Best: %.2lf \t sBest: %.2lf \t sBestRun: %.2lf", Iter, betaMin, betaMax, sBestLine.ofv, sBest.ofv, pool[0].ofv);
 
         // Q-Learning
@@ -174,7 +174,7 @@ void ILS(const TRunData &runData, const TProblemData &data)
             int st_1 = S[st].Ai[at];
 
             // Update the Q-Table value
-            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]); 
+            S[st].Qa[at] = S[st].Qa[at] + lf*(R + df*S[st_1].maxQ - S[st].Qa[at]);
 
             if (S[st].Qa[at] > S[st].maxQ)
             {
@@ -185,7 +185,7 @@ void ILS(const TRunData &runData, const TProblemData &data)
             // Define the new current state st
             st = st_1;
         }
-        
+
         // terminate the search process in MAXTIME
         end_timeMH = get_time_in_seconds();
         currentTime = end_timeMH - start_timeMH;
