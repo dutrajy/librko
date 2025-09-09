@@ -1,8 +1,5 @@
-# Framework_v2.0
-This is the second version of the RKO framework
-
-
-# RKO - Random-Key Optimizer
+# RKO - Random-Key Optimizer v2.0
+This is the second version of the RKO framework in C++.
 
 This is an implementation of the RKO to solve combinatorial optimization problems. The code was prepared for Unix and Windows systems. However, the openMP paradigm needs to be enabled.
 
