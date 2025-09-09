@@ -91,3 +91,9 @@ Users can choose two parameter settings: parameter tuning (option 0) and paramet
 ## OpenMP
 
 The code was implemented to run in parallel using the OpenMP directive. In this setup, #MH threads are required for each run. Each thread executes a different metaheuristic. The threads run independently, and information about the best solutions is shared through a solution pool.
+
+## Object-oriented C++
+
+An object-oriented C++ version of RKO has been recently developed by Johnny Dutra. The project was created from a fork of this repository and is available at the following link:
+
+https://github.com/dutrajy/librko
